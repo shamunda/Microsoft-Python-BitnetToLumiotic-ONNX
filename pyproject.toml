@@ -8,11 +8,11 @@ dependencies = [
     "onnx>=1.14.0",
     "onnxruntime>=1.15.0",
     "numpy>=1.21.0",
-    "safetensors>=0.3.0",
     "torch>=2.0.0",
     "transformers>=4.46.3,<5.0.0",
     "protobuf>=4.21.0,<5.0.0",
-    "sentencepiece>=0.2.0"
+    "sentencepiece>=0.2.0",
+    "safetensors"
 ]
 
 [[tool.uv.index]]
@@ -848,7 +848,6 @@ s2fft = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
 s3prl = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
 s3torchconnector = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
 saferx = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
-safetensors = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
 sagemaker-huggingface-inference-toolkit = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
 sagemaker-ssh-helper = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
 salesforce-lavis = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
@@ -1136,3 +1135,4 @@ yta-general-utils = [{ index = "pytorch-cpu", marker = "platform_system == 'Linu
 zensvi = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
 zetascale = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
 zuko = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
+safetensors = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
