@@ -16,6 +16,8 @@ import onnxruntime as ort
 from safetensors import safe_open
 import json
 from typing import Dict, Any, List, Tuple
+from huggingface_hub import snapshot_download, hf_hub_download
+import tempfile
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -305,6 +307,61 @@ class BitNetONNXBuilder:
         
         return model
 
+class HuggingFaceDownloader:
+    """Downloads BitNet models from Hugging Face"""
+    
+    def __init__(self):
+        self.temp_dir = None
+        
+    def download_model(self, model_name: str) -> str:
+        """Download model from Hugging Face and return path to safetensors file"""
+        logger.info(f"Downloading model '{model_name}' from Hugging Face...")
+        
+        try:
+            # Create temporary directory for model
+            self.temp_dir = tempfile.mkdtemp(prefix="bitnet_model_")
+            
+            # Download the entire model repository
+            model_path = snapshot_download(
+                repo_id=model_name,
+                local_dir=self.temp_dir,
+                repo_type="model"
+            )
+            
+            # Look for safetensors files
+            safetensors_files = []
+            for root, dirs, files in os.walk(model_path):
+                for file in files:
+                    if file.endswith('.safetensors'):
+                        safetensors_files.append(os.path.join(root, file))
+            
+            if not safetensors_files:
+                raise FileNotFoundError("No .safetensors files found in the downloaded model")
+            
+            # Use the first safetensors file found (or model.safetensors if available)
+            model_file = None
+            for file in safetensors_files:
+                if 'model.safetensors' in file:
+                    model_file = file
+                    break
+            
+            if not model_file:
+                model_file = safetensors_files[0]
+            
+            logger.info(f"Model downloaded successfully to: {model_file}")
+            return model_file
+            
+        except Exception as e:
+            logger.error(f"Failed to download model: {str(e)}")
+            raise
+    
+    def cleanup(self):
+        """Clean up temporary files"""
+        if self.temp_dir and os.path.exists(self.temp_dir):
+            import shutil
+            shutil.rmtree(self.temp_dir)
+            logger.info("Cleaned up temporary model files")
+
 class BitNetConverter:
     """Main converter class"""
     
@@ -312,6 +369,7 @@ class BitNetConverter:
         self.model_path = model_path
         self.output_path = output_path
         self.config = BitNetModelConfig()
+        self.downloader = None
         
     def convert(self):
         """Perform the conversion from BitNet to ONNX"""
@@ -343,6 +401,10 @@ class BitNetConverter:
         except Exception as e:
             logger.error(f"Conversion failed: {str(e)}")
             raise
+        finally:
+            # Clean up downloaded model if we downloaded it
+            if self.downloader:
+                self.downloader.cleanup()
     
     def test_onnx_runtime(self):
         """Test the generated ONNX model with ONNX Runtime"""
@@ -370,13 +432,43 @@ class BitNetConverter:
         except Exception as e:
             logger.warning(f"ONNX Runtime test failed: {str(e)}")
 
+def get_model_input() -> str:
+    """Interactive function to get model name from user"""
+    print("\n" + "="*60)
+    print("BitNet to ONNX Converter")
+    print("="*60)
+    print("\nThis tool converts BitNet models from Hugging Face to ONNX format.")
+    print("\nSupported models:")
+    print("- microsoft/BitNet-b1_58-large")
+    print("- microsoft/BitNet-b1_58-3B")
+    print("- Or any other BitNet model repository on Hugging Face")
+    print("\nExamples:")
+    print("  microsoft/BitNet-b1_58-large")
+    print("  HuggingFaceTB/SmolLM-BitNet-b1_58-135M")
+    print("\n" + "-"*60)
+    
+    while True:
+        model_name = input("\nEnter the Hugging Face model name to convert: ").strip()
+        
+        if not model_name:
+            print("Please enter a valid model name.")
+            continue
+            
+        if "/" not in model_name:
+            print("Model name should be in format 'organization/model-name'")
+            continue
+            
+        return model_name
+
 def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(description="Convert BitNet models to ONNX format")
-    parser.add_argument("--input", "-i", required=True, 
-                       help="Path to input BitNet model file (.safetensors)")
-    parser.add_argument("--output", "-o", required=True,
-                       help="Path to output ONNX model file (.onnx)")
+    parser.add_argument("--input", "-i", 
+                       help="Path to input BitNet model file (.safetensors). If not provided, will prompt for Hugging Face model.")
+    parser.add_argument("--output", "-o",
+                       help="Path to output ONNX model file (.onnx). If not provided, will use model name.")
+    parser.add_argument("--model", "-m",
+                       help="Hugging Face model name (e.g., microsoft/BitNet-b1_58-large)")
     parser.add_argument("--verbose", "-v", action="store_true",
                        help="Enable verbose logging")
     
@@ -385,10 +477,40 @@ def main():
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
     
-    # Validate input file
-    if not os.path.exists(args.input):
-        logger.error(f"Input file not found: {args.input}")
-        sys.exit(1)
+    # Determine input source
+    model_path = None
+    downloader = None
+    
+    if args.input:
+        # Use provided local file
+        if not os.path.exists(args.input):
+            logger.error(f"Input file not found: {args.input}")
+            sys.exit(1)
+        model_path = args.input
+        
+    elif args.model:
+        # Use provided Hugging Face model
+        downloader = HuggingFaceDownloader()
+        model_path = downloader.download_model(args.model)
+        
+    else:
+        # Interactive mode - ask user for model
+        model_name = get_model_input()
+        downloader = HuggingFaceDownloader()
+        model_path = downloader.download_model(model_name)
+        
+        # Set default output name based on model
+        if not args.output:
+            safe_model_name = model_name.replace("/", "_").replace("-", "_")
+            args.output = f"{safe_model_name}.onnx"
+    
+    # Set default output if not provided
+    if not args.output:
+        if args.input:
+            base_name = os.path.splitext(os.path.basename(args.input))[0]
+            args.output = f"{base_name}.onnx"
+        else:
+            args.output = "bitnet_model.onnx"
     
     # Create output directory if needed
     output_dir = os.path.dirname(args.output)
@@ -396,8 +518,17 @@ def main():
         os.makedirs(output_dir, exist_ok=True)
     
     # Perform conversion
-    converter = BitNetConverter(args.input, args.output)
-    converter.convert()
+    converter = BitNetConverter(model_path, args.output)
+    converter.downloader = downloader  # For cleanup
+    
+    try:
+        converter.convert()
+        print(f"\n✅ Conversion completed successfully!")
+        print(f"📁 Output saved to: {args.output}")
+        
+    except Exception as e:
+        logger.error(f"Conversion failed: {str(e)}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
