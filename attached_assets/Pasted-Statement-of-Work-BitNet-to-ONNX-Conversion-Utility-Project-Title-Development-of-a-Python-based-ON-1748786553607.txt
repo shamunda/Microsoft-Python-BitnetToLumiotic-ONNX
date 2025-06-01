@@ -1,0 +1,116 @@
+Statement of Work: BitNet to ONNX Conversion Utility
+Project Title: Development of a Python-based ONNX Conversion Utility for Microsoft BitNet Models
+
+Date: June 1, 2025
+
+1. Project Overview & Purpose
+This project aims to develop a Python-based software utility capable of converting Microsoft BitNet language models, specifically targeting the BitNet-b1.58-2B-4T variant, into the ONNX (Open Neural Network Exchange) format. The utility will operate on a CPU-only OpenSUSE Tumbleweed environment. The primary input for the conversion will be the model's weights (assumed to be available in a format like .safetensors) and architectural information derived from the official BitNet paper and the provided GGUF inference log.
+
+2. Project Goals & Objectives
+
+To develop a robust Python 3.9 script that accurately parses BitNet model architecture and weights.
+
+Important to note. The platform should be PYTHON 3.9
+
+To convert the BitNet BitNet-b1.58-2B-4T model into a functional ONNX model.
+The initial ONNX model will represent the weights in a standard precision format (e.g., FP32) by dequantizing the original 1.58-bit ternary weights.
+Ensure the generated ONNX model is loadable and structurally valid for CPU-based inference using common ONNX runtimes.
+Provide clear documentation for using the conversion utility.
+3. Scope of Work
+
+Phase 1: Research, Design, and Setup
+
+Task 1.1: Information Gathering & Analysis
+Review the concepts and links (e.g., to the arXiv paper) within the Microsoft BitNet GitHub repository (https://github.com/microsoft/BitNet) for high-level architectural understanding.
+Thoroughly analyze the provided GGUF inference log for BitNet-b1.58-2B-4T to extract definitive architectural parameters, including but not limited to:
+general.architecture (= bitnet-b1.58)
+vocab_size (= 128256)
+context_length (= 4096)
+embedding_length (= 2560)
+block_count (= 30)
+feed_forward_length (= 6912)
+rope.dimension_count (= 128)
+attention.head_count (= 20)
+attention.head_count_kv (= 5) (indicating Grouped Query Attention)
+attention.layer_norm_rms_epsilon (= 0.000010)
+rope.freq_base (= 500000.0)
+Quantization type (i2_s, 2 bpw ternary)
+Tokenizer model type (e.g., gpt2)
+Consult the official BitNet paper for detailed architectural diagrams, layer definitions, and the specifics of the 1.58-bit ternary weight quantization.
+Task 1.2: Input Model Specification
+Confirm the exact format and source of the input BitNet-b1.58-2B-4T model weights (e.g., model.safetensors file, assumed to be provided by the client from their existing models/BitNet-b1.58-2B-4T directory).
+Identify how the 1.58-bit ternary weights and their associated scaling factors (if any) are stored in the source file.
+Task 1.3: ONNX Conversion Strategy
+Design the ONNX graph structure to mirror the BitNet architecture, including embedding layers, transformer blocks (with GQA, RoPE, RMSNorm), and the final language model head.
+Define a strategy for handling the 1.58-bit ternary weights. The primary approach will be to dequantize these weights to FP32 for representation in the ONNX model. This involves understanding how to interpret the {-1, 0, 1} values and apply any necessary scaling factors.
+Task 1.4: Environment Setup
+Configure the Python 3.x development environment on OpenSUSE Tumbleweed.
+Install necessary libraries: onnx, numpy, safetensors (for reading model weights), and onnxruntime (for testing).
+Phase 2: Implementation
+
+Task 2.1: Model Loading Module
+Develop Python functions to load the BitNet model's configuration (architecture parameters) and weights from the specified input file (.safetensors or equivalent).
+Implement logic to correctly interpret and dequantize the 1.58-bit ternary weights (and any associated scales) into FP32 numpy arrays.
+Task 2.2: ONNX Graph Construction Module
+Using the onnx Python library, implement functions to dynamically build the ONNX computation graph based on the extracted BitNet architectural parameters.
+This includes defining ONNX nodes for:
+Token Embeddings
+Rotary Positional Embeddings (RoPE)
+RMS Layer Normalization
+Grouped Query Attention (GQA) mechanisms
+Feed-Forward Networks (FFN)
+Linear projection for the language model head
+Assign the dequantized FP32 weights as initializers to the appropriate ONNX nodes.
+Task 2.3: Conversion Script Main Entry Point
+Create a main Python script that orchestrates the loading, conversion, and saving of the ONNX model.
+The script should accept parameters such as the input model file path and the output ONNX file path.
+Phase 3: Testing and Validation
+
+Task 3.1: ONNX Model Validation
+Utilize onnx.checker.check_model() to ensure the generated ONNX model is well-formed and structurally valid.
+Task 3.2: ONNX Runtime Compatibility Test
+Load the generated .onnx file using onnxruntime (CPU version) to verify it can be parsed and loaded without errors on the target CPU (AVX/AVX2) environment.
+Task 3.3: (Optional Stretch Goal) Basic Inference Check
+If feasible and reference outputs can be obtained from the GGUF model for simple inputs, perform a basic inference check with the ONNX model to compare output shapes or a simplified numerical check. This is not a full equivalency test.
+Phase 4: Documentation and Deliverables
+
+Task 4.1: Code Documentation
+Add clear comments and docstrings within the Python code.
+Task 4.2: User Documentation
+Create a README.md file detailing:
+Prerequisites and setup instructions.
+How to run the conversion script, including command-line arguments.
+The expected input model format and any assumptions.
+Known limitations of the converter or the resulting ONNX model.
+4. Key Information Sources / Inputs
+
+Client-provided BitNet-b1.58-2B-4T model files (assumed to include .safetensors weight file and any necessary tokenizer information, located in a directory like models/BitNet-b1.58-2B-4T).
+The BitNet paper (as referenced in the Microsoft GitHub repository) for architectural and quantization details.
+The previously provided GGUF inference log for BitNet-b1.58-2B-4T.
+Conceptual information from https://github.com/microsoft/BitNet.
+5. Deliverables
+
+D1: A Python script (.py) for converting BitNet models (specifically BitNet-b1.58-2B-4T) to ONNX format (FP32 weights).
+D2: A sample converted .onnx model file derived from the BitNet-b1.58-2B-4T source.
+D3: README.md file containing usage instructions and documentation for the conversion utility.
+6. Technical Environment and Constraints
+
+Operating System: OpenSUSE Tumbleweed.
+Programming Language: Python 3.x.
+CPU: Target system is CPU-only, with AVX/AVX2 support. No GPU will be used for development or testing of the conversion utility.
+Key Python Libraries: onnx, numpy, safetensors, onnxruntime.
+Input Model Source: The project relies on the client providing the BitNet model files, as the specified Microsoft GitHub repository does not currently host them.
+7. Assumptions
+
+The client possesses and will provide access to the BitNet-b1.58-2B-4T model weights (e.g., in .safetensors format) and any associated configuration needed for understanding its structure, beyond what's in the GGUF log.
+The BitNet 1.58-bit ternary quantization scheme can be reasonably dequantized to FP32 for representation in the initial ONNX model.
+The core BitNet architecture, despite its novel quantization, is composed of elements (Transformers, attention, FFNs) that can be represented using standard ONNX operators once weights are in FP32.
+The focus is on creating a functional ONNX model for CPU inference; performance optimization of the ONNX model is outside the scope of this SOW.
+8. Exclusions
+
+Development of a custom ONNX operator to natively handle 1.58-bit ternary weights.
+Training or fine-tuning of BitNet models.
+Extensive numerical equivalency testing against the original GGUF model (beyond basic structural and loading checks).
+Conversion of the tokenizer logic into an ONNX model (though tokenizer metadata from the GGUF log may be referenced or saved alongside).
+Support for GPU-specific ONNX optimizations or features.
+Support for BitNet model variants other than BitNet-b1.58-2B-4T unless explicitly agreed upon.
