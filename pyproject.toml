@@ -1,7 +1,16 @@
 [project]
-name = "python-template"
+name = "bitnet-to-onnx-converter"
 version = "0.1.0"
-description = ""
+description = "Python-based ONNX Conversion Utility for Microsoft BitNet Models"
 authors = ["Your Name <you@example.com>"]
-requires-python = ">=3.11"
-dependencies = []
+requires-python = ">=3.9"
+dependencies = [
+    "onnx>=1.14.0",
+    "onnxruntime>=1.15.0",
+    "numpy>=1.21.0",
+    "safetensors>=0.3.0",
+    "torch>=2.0.0",
+    "transformers>=4.46.3,<5.0.0",
+    "protobuf>=4.21.0,<5.0.0",
+    "sentencepiece>=0.2.0"
+]

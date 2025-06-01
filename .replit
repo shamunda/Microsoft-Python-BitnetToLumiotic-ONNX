@@ -1,5 +1,5 @@
 entrypoint = "main.py"
-modules = ["python-3.11"]
+modules = ["python-3.9"]
 
 [nix]
 channel = "stable-24_05"
@@ -13,3 +13,15 @@ requiredFiles = [".replit", "replit.nix"]
 [deployment]
 run = ["python3", "main.py"]
 deploymentTarget = "cloudrun"
+
+[workflows]
+runButton = "Run BitNet Converter"
+
+[[workflows.workflow]]
+name = "Run BitNet Converter"
+author = 43343624
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3.9 main.py --help"
