@@ -3,6 +3,7 @@ modules = ["python-3.9"]
 
 [nix]
 channel = "stable-24_05"
+packages = ["abseil-cpp", "cargo", "gtest", "libiconv", "oneDNN", "pkg-config", "re2", "rustc"]
 
 [unitTest]
 language = "python3"
